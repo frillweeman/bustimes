@@ -194,13 +194,14 @@
       font-size: 0.78rem;
     }
 
-    .stop-name { color: /*var(--muted)*/ white; }
+    .stop-name { color: inherit; }
 
-    .stop-time        { font-weight: 600; font-size: 0.82rem; }
-    .stop-time.green  { color: var(--green); }
-    .stop-time.orange { color: var(--orange); }
-    .stop-time.red    { color: var(--red); }
-    .stop-time.past   { color: var(--muted); text-decoration: line-through; }
+    .stop-time              { font-weight: 600; font-size: 0.82rem; }
+    .stop-row.green         { color: var(--green); }
+    .stop-row.orange        { color: var(--orange); }
+    .stop-row.red           { color: var(--red); }
+    .stop-row.past          { color: var(--muted); }
+    .stop-row.past .stop-time { text-decoration: line-through; }
 
     /* ── Transport rows ── */
     .divider {
@@ -267,6 +268,10 @@
       margin-left: auto;
     }
 
+    .leave-relative.green  { color: var(--green); }
+    .leave-relative.orange { color: var(--orange); }
+    .leave-relative.red    { color: var(--red); }
+
     .no-trips {
       color: var(--muted);
       font-size: 0.85rem;
@@ -317,6 +322,24 @@
         .replace(/"/g, "&quot;");
     }
 
+    const TRANSPORT_COLOR_THRESHOLDS = {
+      orange: 2,
+      green: 5
+    }
+
+    function transportColor(accessTimeSec, firstStopArrivalSec, nowEpochSec) {
+      if (accessTimeSec >= (firstStopArrivalSec - nowEpochSec)) return "red";
+      const leaveInMin = ((firstStopArrivalSec - accessTimeSec) - nowEpochSec) / 60;
+      if (leaveInMin >= TRANSPORT_COLOR_THRESHOLDS.green) return "green";
+      if (leaveInMin >= TRANSPORT_COLOR_THRESHOLDS.orange) return "orange";
+      return "red";
+    }
+
+    const COLOR_RANK = { red: 0, orange: 1, green: 2 };
+    function worstColor(...colors) {
+      return colors.reduce((worst, c) => COLOR_RANK[c] < COLOR_RANK[worst] ? c : worst);
+    }
+
     function arrivalColor(minutes) {
       if (minutes >= 15) return "green";
       if (minutes >= 8)  return "orange";
@@ -345,12 +368,13 @@
       const leaveAtEpochSec = firstStopArrivalSec - accessTimeSec;
       const leaveInSec = Math.floor(leaveAtEpochSec - nowEpochSec);
       const missed = accessTimeSec >= (firstStopArrivalSec - nowEpochSec);
+      const color = missed ? null : transportColor(accessTimeSec, firstStopArrivalSec, nowEpochSec);
       const relText = missed ? "Too late" : (leaveInSec <= 60 ? "Leave Now" : `Leave in ${Math.floor(leaveInSec / 60)}m`);
       const absText = missed ? "" : mtTimeFmt.format(new Date(leaveAtEpochSec * 1000));
       return `
         <div class="transport-row${missed ? " missed" : ""}">
           <span class="transport-label">${ICONS[iconKey]}${esc(label)}</span>
-          <span class="leave-relative">${relText}</span>
+          <span class="leave-relative${color ? ` ${color}` : ""}">${relText}</span>
           ${absText ? `<span class="leave-absolute">${absText}</span>` : ""}
         </div>`;
     }
@@ -359,21 +383,28 @@
       const firstStop = trip.stops[0];
       const primaryArrivalSec = firstStop.arrivalEpochSeconds;
       const primaryMinutes = Math.floor((primaryArrivalSec - nowEpochSec) / 60);
-      const color = arrivalColor(primaryMinutes);
+      const access = firstStop.comfortableAccessTimeSeconds;
+      const color = worstColor(
+        transportColor(access.electric, primaryArrivalSec, nowEpochSec),
+        transportColor(access.bike, primaryArrivalSec, nowEpochSec)
+      );
       const timeText = primaryMinutes <= 0 ? "Now" : `${primaryMinutes} min`;
       const statusIconKey = trip.isRealtime ? "live" : "scheduled";
       const routeIconHtml = getRouteIcon(trip.routeId) ?? "";
-      const access = firstStop.comfortableAccessTimeSeconds;
 
       const stopsHtml = trip.stops.length > 1
         ? `<div class="stops-list">${trip.stops.map((stop) => {
             const mins = Math.floor((stop.arrivalEpochSeconds - nowEpochSec) / 60);
             const isPast = stop.arrivalEpochSeconds < nowEpochSec;
-            const timeClass = isPast ? "past" : arrivalColor(mins);
+            const stopAccess = stop.comfortableAccessTimeSeconds;
+            const rowClass = isPast ? "past" : worstColor(
+              transportColor(stopAccess.electric, stop.arrivalEpochSeconds, nowEpochSec),
+              transportColor(stopAccess.bike, stop.arrivalEpochSeconds, nowEpochSec)
+            );
             const timeStr = isPast ? "passed" : (mins <= 0 ? "Now" : `${mins} min`);
-            return `<div class="stop-row">
+            return `<div class="stop-row ${rowClass}">
               <span class="stop-name">from <b>${esc(stop.nickname)}</b></span>
-              <span class="stop-time ${timeClass}">${timeStr}</span>
+              <span class="stop-time">${timeStr}</span>
             </div>`;
           }).join("")}</div>`
         : "";
