@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bus Thing</title>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1c1f2e;
+      --text: #e8eaf6;
+      --muted: #6b7280;
+      --green: #22c55e;
+      --orange: #f97316;
+      --red: #ef4444;
+      --border: #2d3148;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100dvh;
+      padding: 1.5rem 1rem 3rem;
+    }
+
+    /* ── Status badge ── */
+    #status-badge {
+      position: fixed;
+      top: 0.9rem;
+      right: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.3rem 0.65rem;
+      border-radius: 999px;
+      border: 1px solid transparent;
+      transition: background 0.4s, color 0.4s, border-color 0.4s;
+    }
+
+    #status-badge.connected {
+      background: rgba(34,197,94,0.12);
+      color: var(--green);
+      border-color: rgba(34,197,94,0.25);
+    }
+
+    #status-badge.disconnected {
+      background: rgba(239,68,68,0.12);
+      color: var(--red);
+      border-color: rgba(239,68,68,0.25);
+    }
+
+    #status-badge.pending {
+      background: rgba(107,114,128,0.12);
+      color: var(--muted);
+      border-color: rgba(107,114,128,0.2);
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    #status-badge.connected .badge-dot { background: var(--green); }
+    #status-badge.disconnected .badge-dot { background: var(--red); }
+    #status-badge.pending .badge-dot { background: var(--muted); }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    #updated {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.3rem;
+    }
+
+    /* ── Board grid ── */
+    .board {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 2rem;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .destination h2 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .trip-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    /* ── Trip card ── */
+    .trip-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+    }
+
+    .trip-header {
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .route-id {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--text);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .route-id svg {
+      width: 1.3rem;
+      height: 1.3rem;
+      flex-shrink: 0;
+      fill: currentColor;
+    }
+
+    .arrival-primary {
+      font-size: 1.6rem;
+      font-weight: 700;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      justify-content: flex-end;
+    }
+
+    .arrival-primary svg {
+      width: 1rem;
+      height: 1rem;
+      flex-shrink: 0;
+      fill: currentColor;
+      opacity: 0.7;
+    }
+
+    .arrival-absolute {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+    }
+
+    .arrival-primary.green  { color: var(--green); }
+    .arrival-primary.orange { color: var(--orange); }
+    .arrival-primary.red    { color: var(--red); }
+
+    /* ── Multi-stop rows ── */
+    .stops-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .stop-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.78rem;
+    }
+
+    .stop-name { color: /*var(--muted)*/ white; }
+
+    .stop-time        { font-weight: 600; font-size: 0.82rem; }
+    .stop-time.green  { color: var(--green); }
+    .stop-time.orange { color: var(--orange); }
+    .stop-time.red    { color: var(--red); }
+    .stop-time.past   { color: var(--muted); text-decoration: line-through; }
+
+    /* ── Transport rows ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 0.6rem 0;
+    }
+
+    .transport-section-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.3rem;
+    }
+
+    .transport-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .transport-row {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      min-height: 1.5rem;
+    }
+
+    .transport-row.missed {
+      color: var(--muted);
+      text-decoration: line-through;
+    }
+
+    .transport-label {
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      min-width: 6.5rem;
+      flex-shrink: 0;
+    }
+
+    .transport-label svg {
+      width: 1.2rem;
+      height: 1.2rem;
+      flex-shrink: 0;
+      fill: currentColor;
+      opacity: 0.9;
+    }
+
+    .transport-row.missed .transport-label svg {
+      opacity: 0.3;
+    }
+
+    .leave-relative { font-weight: 600; flex-shrink: 0; }
+
+    .leave-absolute {
+      font-size: 0.7rem;
+      color: var(--muted);
+      margin-left: auto;
+    }
+
+    .no-trips {
+      color: var(--muted);
+      font-size: 0.85rem;
+      padding: 0.4rem 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="status-badge" class="pending">
+    <span class="badge-dot"></span>
+    <span id="status-text">Connecting</span>
+  </div>
+
+  <header>
+    <h1>Bus Thing</h1>
+    <div id="updated">—</div>
+  </header>
+
+  <div class="board" id="board"></div>
+
+  <script>
+    // ── Formatters ──────────────────────────────────────────────────────────
+    const mtTimeFmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Denver",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    const mtUpdatedFmt = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Denver",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+
+    // ── State ───────────────────────────────────────────────────────────────
+    let lastData = null;
+    let lastUpdatedAt = null; // Date object
+
+    // ── Helpers ─────────────────────────────────────────────────────────────
+    function esc(s) {
+      return String(s)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function arrivalColor(minutes) {
+      if (minutes >= 15) return "green";
+      if (minutes >= 8)  return "orange";
+      return "red";
+    }
+
+    const ICONS = {
+      scheduled: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="M200-640h560v-80H200v80Zm0 0v-80 80Zm0 560q-33 0-56.5-23.5T120-160v-560q0-33 23.5-56.5T200-800h40v-80h80v80h320v-80h80v80h40q33 0 56.5 23.5T840-720v227q-19-9-39-15t-41-9v-43H200v400h252q7 22 16.5 42T491-80H200Zm378.5-18.5Q520-157 520-240t58.5-141.5Q637-440 720-440t141.5 58.5Q920-323 920-240T861.5-98.5Q803-40 720-40T578.5-98.5ZM787-145l28-28-75-75v-112h-40v128l87 87Z"/></svg>`,
+      live: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="M480-107q75-71 117.5-136.5T640-354q0-69-46.5-117.5T480-520q-67 0-113.5 48.5T320-354q0 45 42.5 110.5T480-107Zm0 107Q359-103 299.5-191T240-354q0-102 69.5-174T480-600q101 0 170.5 72T720-354q0 75-59.5 163T480 0Zm42.5-317.5Q540-335 540-360t-17.5-42.5Q505-420 480-420t-42.5 17.5Q420-385 420-360t17.5 42.5Q455-300 480-300t42.5-17.5ZM338-662l-56-56q40-40 91-61t107-21q56 0 107 21t91 61l-56 56q-29-29-65.5-43.5T480-720q-40 0-76.5 14.5T338-662ZM226-775l-57-56q63-63 143-96t168-33q88 0 168 33t143 96l-56 57q-51-51-117-78.5T480-880q-72 0-137.5 27T226-775Zm254 415Z"/></svg>`,
+      scooter: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="M269-9q-9-9-9-21t9-21q9-9 21-9t21 9q9 9 9 21t-9 21q-9 9-21 9t-21-9Zm340 0q-9-9-9-21t9-21q9-9 21-9t21 9q9 9 9 21t-9 21q-9 9-21 9t-21-9ZM270-80q-45 0-83-19.5T124-152q-3-5-4.5-9t-1.5-9q0-12 8-21t22-9q8 0 13.5 3t10.5 9q12 17 30.5 28.5T242-143l125-151-53-166q-5-17-3-34t11-32l96-154h-94l-76 122-68-42 100-160h228q27 0 43.5 15t22.5 28l21 48q20 48 64.5 78.5T760-560v80q-70 0-128-33.5T539-602l-72 115 173 107v240h12q29 0 54-13t42-35q5-6 10.5-9t13.5-3q13 0 21.5 9t8.5 21q0 5-1.5 9t-4.5 9q-25 33-62 52.5T652-80H270Zm74-60h216v-184l-140-88 40 132-116 140Zm256-620q-33 0-56.5-23.5T520-840q0-33 23.5-56.5T600-920q33 0 56.5 23.5T680-840q0 33-23.5 56.5T600-760Z"/></svg>`,
+      bike: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960"><path d="M200-80q-83 0-141.5-58.5T0-280q0-83 58.5-141.5T200-480q83 0 141.5 58.5T400-280q0 83-58.5 141.5T200-80Zm85-115q35-35 35-85t-35-85q-35-35-85-35t-85 35q-35 35-35 85t35 85q35 35 85 35t85-35Zm155-5v-200L312-512q-12-11-18-25.5t-6-30.5q0-16 6.5-30.5T312-624l112-112q12-12 27.5-18t32.5-6q17 0 32.5 6t27.5 18l76 76q28 28 64 44t76 16v80q-57 0-108.5-22T560-604l-32-32-96 96 88 92v248h-80Zm123.5-563.5Q540-787 540-820t23.5-56.5Q587-900 620-900t56.5 23.5Q700-853 700-820t-23.5 56.5Q653-740 620-740t-56.5-23.5ZM760-80q-83 0-141.5-58.5T560-280q0-83 58.5-141.5T760-480q83 0 141.5 58.5T960-280q0 83-58.5 141.5T760-80Zm85-115q35-35 35-85t-35-85q-35-35-85-35t-85 35q-35 35-35 85t35 85q35 35 85 35t85-35Z"/></svg>`,
+      FF: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="m334-80-74-30 58-141q-106-28-172-114T80-560v-160q0-66 47-113t113-47q22 0 42 7.5t40 15.5l238 97-160 60v60l440 280 40 200h-80l-40-80H560v160h-80v-160h-80L334-80Zm66-240h353l-63-40H400q-66 0-113-47t-47-113h80q0 33 23.5 56.5T400-440h165L320-596v-124q0-33-23.5-56.5T240-800q-33 0-56.5 23.5T160-720v160q0 100 70 170t170 70ZM211.5-691.5Q200-703 200-720t11.5-28.5Q223-760 240-760t28.5 11.5Q280-737 280-720t-11.5 28.5Q257-680 240-680t-28.5-11.5ZM400-360Z"/></svg>`,
+      AB: `<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#1f1f1f"><path d="m397-115-99-184-184-99 71-70 145 25 102-102-317-135 84-86 385 68 124-124q23-23 57-23t57 23q23 23 23 56.5T822-709L697-584l68 384-85 85-136-317-102 102 26 144-71 71Z"/></svg>`
+    };
+
+    // Route prefix icons — only FF and AB keys
+    const ROUTE_ICON_PREFIXES = ["FF", "AB"];
+
+    function getRouteIcon(routeId) {
+      const prefix = ROUTE_ICON_PREFIXES.find((k) => routeId.startsWith(k));
+      return prefix ? ICONS[prefix] : null;
+    }
+
+    // ── Rendering ────────────────────────────────────────────────────────────
+    function renderTransportRow(iconKey, label, accessTimeSec, firstStopArrivalSec, nowEpochSec) {
+      const leaveAtEpochSec = firstStopArrivalSec - accessTimeSec;
+      const leaveInSec = Math.floor(leaveAtEpochSec - nowEpochSec);
+      const missed = accessTimeSec >= (firstStopArrivalSec - nowEpochSec);
+      const relText = missed ? "Too late" : (leaveInSec <= 60 ? "Leave Now" : `Leave in ${Math.floor(leaveInSec / 60)}m`);
+      const absText = missed ? "" : mtTimeFmt.format(new Date(leaveAtEpochSec * 1000));
+      return `
+        <div class="transport-row${missed ? " missed" : ""}">
+          <span class="transport-label">${ICONS[iconKey]}${esc(label)}</span>
+          <span class="leave-relative">${relText}</span>
+          ${absText ? `<span class="leave-absolute">${absText}</span>` : ""}
+        </div>`;
+    }
+
+    function renderTripCard(trip, nowEpochSec) {
+      const firstStop = trip.stops[0];
+      const primaryArrivalSec = firstStop.arrivalEpochSeconds;
+      const primaryMinutes = Math.floor((primaryArrivalSec - nowEpochSec) / 60);
+      const color = arrivalColor(primaryMinutes);
+      const timeText = primaryMinutes <= 0 ? "Now" : `${primaryMinutes} min`;
+      const statusIconKey = trip.isRealtime ? "live" : "scheduled";
+      const routeIconHtml = getRouteIcon(trip.routeId) ?? "";
+      const access = firstStop.comfortableAccessTimeSeconds;
+
+      const stopsHtml = trip.stops.length > 1
+        ? `<div class="stops-list">${trip.stops.map((stop) => {
+            const mins = Math.floor((stop.arrivalEpochSeconds - nowEpochSec) / 60);
+            const isPast = stop.arrivalEpochSeconds < nowEpochSec;
+            const timeClass = isPast ? "past" : arrivalColor(mins);
+            const timeStr = isPast ? "passed" : (mins <= 0 ? "Now" : `${mins} min`);
+            return `<div class="stop-row">
+              <span class="stop-name">from <b>${esc(stop.nickname)}</b></span>
+              <span class="stop-time ${timeClass}">${timeStr}</span>
+            </div>`;
+          }).join("")}</div>`
+        : "";
+
+      return `
+        <div class="trip-card">
+          <div class="trip-header">
+            <span class="route-id">${routeIconHtml}${esc(trip.routeId)}</span>
+            <div style="text-align:right">
+              <div class="arrival-primary ${color}">${ICONS[statusIconKey]}${timeText}</div>
+              <div class="arrival-absolute">${mtTimeFmt.format(new Date(primaryArrivalSec * 1000))}</div>
+            </div>
+          </div>
+          ${stopsHtml}
+          <hr class="divider">
+          <div class="transport-section-label">Access via</div>
+          <div class="transport-rows">
+            ${renderTransportRow("scooter", "E-Skate", access.electric, primaryArrivalSec, nowEpochSec)}
+            ${renderTransportRow("bike", "Bike", access.bike, primaryArrivalSec, nowEpochSec)}
+          </div>
+        </div>`;
+    }
+
+    function render(data) {
+      const nowEpochSec = Date.now() / 1000;
+      const destinations = data.destinations || {};
+      const destNames = Object.keys(destinations);
+      const board = document.getElementById("board");
+
+      if (destNames.length === 0) {
+        board.innerHTML = '<p class="no-trips" style="text-align:center;grid-column:1/-1">No trip data yet.</p>';
+        return;
+      }
+
+      board.innerHTML = destNames.map((destName) => {
+        const upcoming = (destinations[destName] || [])
+          .filter((t) => t.stops.some((s) => s.arrivalEpochSeconds >= nowEpochSec))
+          .slice(0, 3);
+        const cardsHtml = upcoming.length === 0
+          ? '<p class="no-trips">No upcoming trips</p>'
+          : upcoming.map((trip) => renderTripCard(trip, nowEpochSec)).join("");
+        return `
+          <div class="destination">
+            <h2>To ${esc(destName)}</h2>
+            <div class="trip-cards">${cardsHtml}</div>
+          </div>`;
+      }).join("");
+
+      if (lastUpdatedAt) {
+        document.getElementById("updated").textContent =
+          "Updated " + mtUpdatedFmt.format(lastUpdatedAt) + " MT";
+      }
+    }
+
+    // ── SSE connection ───────────────────────────────────────────────────────
+    document.addEventListener("DOMContentLoaded", () => {
+      const badge = document.getElementById("status-badge");
+      const statusText = document.getElementById("status-text");
+
+      const es = new EventSource("/events");
+
+      es.onopen = () => {
+        badge.className = "connected";
+        statusText.textContent = "Live";
+      };
+
+      es.onerror = () => {
+        badge.className = "disconnected";
+        statusText.textContent = "Disconnected";
+      };
+
+      es.onmessage = (e) => {
+        const data = JSON.parse(e.data);
+        lastData = data;
+        lastUpdatedAt = data.updatedAt ? new Date(data.updatedAt) : new Date();
+        render(data);
+      };
+
+      // Tick every 15s to re-render relative times
+      setInterval(() => { if (lastData) render(lastData); }, 5000);
+    });
+  </script>
+</body>
+</html>

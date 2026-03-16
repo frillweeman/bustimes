@@ -1,0 +1,85 @@
+{
+	"tripUpdateUrl": "https://open-data.rtd-denver.com/files/gtfs-rt/rtd/TripUpdate.pb",
+	"pollFrequencySeconds": 30,
+	"stops": [
+		{
+			"stopId": "35483",
+			"nickname": "Terracina",
+			"comfortableAccessTimeSeconds": {
+				"electric": 180,
+				"bike": 300
+			}
+		},
+		{
+			"stopId": "34784",
+			"nickname": "Starbucks",
+			"comfortableAccessTimeSeconds": {
+				"electric": 240,
+				"bike": 360
+			}
+		},
+		{
+			"stopId": "25332",
+			"nickname": "Flatiron Station (WB)",
+			"comfortableAccessTimeSeconds": {
+				"electric": 360,
+				"bike": 480
+			}
+		},
+		{
+			"stopId": "25331",
+			"nickname": "Flatiron Station (EB)",
+			"comfortableAccessTimeSeconds": {
+				"electric": 480,
+				"bike": 600
+			}
+		}
+	],
+  "destinationCities": [
+		{
+			"name": "Boulder",
+			"routes": [
+				{
+					"routeId": "FF1",
+					"directionId": 1,
+					"stopsIds": ["25332"]
+				},
+				{
+					"routeId": "FF4",
+					"directionId": 1,
+					"stopsIds": ["25332"]
+				},
+				{
+					"routeId": "AB1",
+					"directionId": 1,
+					"stopsIds": ["35483", "34784"]
+				},
+				{
+					"routeId": "AB2",
+					"directionId": 1,
+					"stopsIds": ["35483", "34784"]
+				},
+				{
+					"routeId": "AB3",
+					"directionId": 1,
+					"stopsIds": ["35483", "34784"]
+				}
+			]
+		},
+		{
+			"name": "Denver",
+			"routes": [
+				{
+					"routeId": "FF1",
+					"directionId": 0,
+					"stopsIds": ["25331"]
+				},
+				{
+					"routeId": "FF4",
+					"directionId": 0,
+					"stopsIds": ["25331"]
+				}
+			]
+		}
+	]
+}
