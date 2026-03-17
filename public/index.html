@@ -26,7 +26,7 @@
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       min-height: 100dvh;
-      padding: 1.5rem 1rem 3rem;
+      padding: 1.5rem 1.5rem 3rem;
     }
 
     /* ── Status badge ── */
@@ -96,15 +96,13 @@
 
     /* ── Board grid ── */
     .board {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 2rem;
-      max-width: 760px;
+      display: block;
+      max-width: 100%;
       margin: 0 auto;
     }
 
     .destination h2 {
-      font-size: 1.6rem;
+      font-size: 1.8rem;
       font-weight: 800;
       letter-spacing: -0.01em;
       color: var(--text);
@@ -136,7 +134,7 @@
     }
 
     .route-id {
-      font-size: 1.05rem;
+      font-size: 2rem;
       font-weight: 800;
       letter-spacing: 0.08em;
       color: var(--text);
@@ -147,8 +145,8 @@
     }
 
     .route-id svg {
-      width: 1.3rem;
-      height: 1.3rem;
+      width: 2rem;
+      height: 2rem;
       flex-shrink: 0;
       fill: currentColor;
     }
@@ -282,11 +280,14 @@
 
     /* ── Destination tabs ── */
     #tab-bar {
-      display: none;
-      max-width: 760px;
+      display: flex;
+      max-width: 100%;
       margin: 0 auto 1.5rem;
       border-bottom: 2px solid var(--border);
     }
+
+    .destination { display: none; }
+    .destination.active { display: block; }
 
     .tab-btn {
       flex: 1;
@@ -308,13 +309,6 @@
     .tab-btn.active {
       color: var(--text);
       border-bottom-color: var(--text);
-    }
-
-    @media (max-width: 800px) {
-      #tab-bar { display: flex; }
-      .board { display: block; }
-      .destination { display: none; }
-      .destination.active { display: block; }
     }
   </style>
 </head>
