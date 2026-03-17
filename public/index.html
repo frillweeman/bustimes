@@ -8,6 +8,8 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    html { font-size: 26px; }
+
     :root {
       --bg: #0f1117;
       --surface: #1c1f2e;
@@ -277,6 +279,43 @@
       font-size: 0.85rem;
       padding: 0.4rem 0;
     }
+
+    /* ── Destination tabs ── */
+    #tab-bar {
+      display: none;
+      max-width: 760px;
+      margin: 0 auto 1.5rem;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .tab-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1rem;
+      font-weight: 700;
+      padding: 0.75rem 1rem;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: color 0.2s, border-color 0.2s;
+      font-family: inherit;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .tab-btn.active {
+      color: var(--text);
+      border-bottom-color: var(--text);
+    }
+
+    @media (max-width: 800px) {
+      #tab-bar { display: flex; }
+      .board { display: block; }
+      .destination { display: none; }
+      .destination.active { display: block; }
+    }
   </style>
 </head>
 <body>
@@ -290,6 +329,7 @@
     <div id="updated">—</div>
   </header>
 
+  <div id="tab-bar"></div>
   <div class="board" id="board"></div>
 
   <script>
@@ -312,6 +352,8 @@
     // ── State ───────────────────────────────────────────────────────────────
     let lastData = null;
     let lastUpdatedAt = null; // Date object
+    let activeDestIndex = 0;
+    let currentDestNames = [];
 
     // ── Helpers ─────────────────────────────────────────────────────────────
     function esc(s) {
@@ -361,6 +403,13 @@
     function getRouteIcon(routeId) {
       const prefix = ROUTE_ICON_PREFIXES.find((k) => routeId.startsWith(k));
       return prefix ? ICONS[prefix] : null;
+    }
+
+    // ── Tab switching ────────────────────────────────────────────────────────
+    function setActiveTab(index) {
+      activeDestIndex = Math.max(0, Math.min(index, currentDestNames.length - 1));
+      document.querySelectorAll(".destination").forEach((el, i) => el.classList.toggle("active", i === activeDestIndex));
+      document.querySelectorAll(".tab-btn").forEach((btn, i) => btn.classList.toggle("active", i === activeDestIndex));
     }
 
     // ── Rendering ────────────────────────────────────────────────────────────
@@ -432,14 +481,18 @@
       const nowEpochSec = Date.now() / 1000;
       const destinations = data.destinations || {};
       const destNames = Object.keys(destinations);
+      currentDestNames = destNames;
+      activeDestIndex = Math.min(activeDestIndex, Math.max(0, destNames.length - 1));
       const board = document.getElementById("board");
+      const tabBar = document.getElementById("tab-bar");
 
       if (destNames.length === 0) {
         board.innerHTML = '<p class="no-trips" style="text-align:center;grid-column:1/-1">No trip data yet.</p>';
+        tabBar.innerHTML = "";
         return;
       }
 
-      board.innerHTML = destNames.map((destName) => {
+      board.innerHTML = destNames.map((destName, i) => {
         const upcoming = (destinations[destName] || [])
           .filter((t) => t.stops.some((s) => s.arrivalEpochSeconds >= nowEpochSec))
           .slice(0, 3);
@@ -447,11 +500,18 @@
           ? '<p class="no-trips">No upcoming trips</p>'
           : upcoming.map((trip) => renderTripCard(trip, nowEpochSec)).join("");
         return `
-          <div class="destination">
+          <div class="destination${i === activeDestIndex ? " active" : ""}">
             <h2>To ${esc(destName)}</h2>
             <div class="trip-cards">${cardsHtml}</div>
           </div>`;
       }).join("");
+
+      tabBar.innerHTML = destNames.map((name, i) =>
+        `<button class="tab-btn${i === activeDestIndex ? " active" : ""}" data-index="${i}">To ${esc(name)}</button>`
+      ).join("");
+      tabBar.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.addEventListener("click", () => setActiveTab(parseInt(btn.dataset.index)));
+      });
 
       if (lastUpdatedAt) {
         document.getElementById("updated").textContent =
@@ -485,6 +545,15 @@
 
       // Tick every 15s to re-render relative times
       setInterval(() => { if (lastData) render(lastData); }, 5000);
+
+      // Swipe between destinations on tablet
+      let touchStartX = 0;
+      const boardEl = document.getElementById("board");
+      boardEl.addEventListener("touchstart", (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
+      boardEl.addEventListener("touchend", (e) => {
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        if (Math.abs(dx) > 50) setActiveTab(activeDestIndex + (dx < 0 ? 1 : -1));
+      }, { passive: true });
     });
   </script>
 </body>
