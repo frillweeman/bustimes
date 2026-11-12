@@ -14,6 +14,7 @@ stops, with how long you have to leave by e-skate or bike. There are two front e
   feed and merges it with the static schedule (`google_transit.zip`, reduced at build time
   to `gtfs-preprocessed.json`). Realtime trips are matched to the static schedule by
   `trip_id`, which gives each trip its route and direction. The result is cached.
+- `minutesAway` is the difference between the arrival's wall-clock minute and the current one, so every countdown changes on the same tick as the clock; the e-paper then changes once a minute instead of whenever any bus's rounded value flips.
 - Nothing time-relative is cached. Only RTD's absolute arrival times are; every request
   computes `minutesAway`, `leaveInMinutes` and `arrivalTime` from the current time.
 - A trip stays listed until its **last** configured stop has passed (Terracina, then

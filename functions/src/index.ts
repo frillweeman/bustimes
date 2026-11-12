@@ -367,7 +367,10 @@ app.get("/api/arrivals", (_req, res) => {
         const access = stop.comfortableAccessTimeSeconds;
         return {
           ...stop,
-          minutesAway: Math.round(secondsAway / 60),
+          // Whole minutes between the arrival's clock minute and the current one, so every
+          // countdown (and the header clock) changes on the same tick. Rounding each bus on
+          // its own phase made the board change every few seconds and wore out the e-paper.
+          minutesAway: Math.floor(stop.arrivalEpochSeconds / 60) - Math.floor(nowEpochSeconds / 60),
           arrivalTime: clockTime(stop.arrivalEpochSeconds),
           // Minutes until you must leave to reach the stop comfortably; negative = too late.
           leaveInMinutes: {
