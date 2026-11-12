@@ -1,0 +1,42 @@
+{%- comment -%}
+  Bus board for a 960x672 1-bit e-paper display (LaraPaper recipe, "full" layout).
+  Polls http://<host>:3000/api/arrivals. No framework classes: the framework's
+  .view is 800x480, so everything here is sized in px. Black and white only:
+  solid fills and heavy weights, no grey.
+{%- endcomment -%}
+{% assign cols = "Boulder,Denver" | split: "," %}
+<div style="position:relative;width:960px;height:672px;overflow:hidden;background:#fff;color:#000;font-family:Inter,Arial,Helvetica,sans-serif;font-weight:700;box-sizing:border-box">
+  <div style="display:flex;justify-content:space-between;align-items:baseline;height:64px;padding:12px 24px 0;border-bottom:6px solid #000;box-sizing:border-box">
+    <span style="font-size:40px;font-weight:900;letter-spacing:1px">BUS BOARD</span>
+    <span style="font-size:30px;font-weight:800">{{ "now" | date: "%-I:%M %p" }}</span>
+  </div>
+  <div style="display:flex;height:608px">
+    {% for name in cols %}
+      {% assign trips = data.destinations[name] %}
+      <div style="flex:1;width:480px;box-sizing:border-box;{% unless forloop.last %}border-right:6px solid #000;{% endunless %}">
+        <div style="background:#000;color:#fff;font-size:30px;font-weight:900;letter-spacing:2px;padding:8px 20px">{{ name | upcase }}</div>
+        {% assign shown = 0 %}
+        {% for trip in trips %}
+          {% assign s = trip.stops[0] %}
+          {% if s.minutesAway >= 0 and shown < 4 %}
+            {% assign shown = shown | plus: 1 %}
+            <div style="display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:3px solid #000;height:116px;box-sizing:border-box">
+              <div style="min-width:100px;font-size:50px;font-weight:900;line-height:1">{{ trip.routeId }}</div>
+              <div style="flex:1;line-height:1.1">
+                <div style="font-size:54px;font-weight:900;line-height:1">{{ s.minutesAway }}<span style="font-size:26px;font-weight:800"> min</span></div>
+                <div style="font-size:22px;font-weight:800;margin-top:4px">{{ s.nickname }}{% unless trip.isRealtime %} (sched){% endunless %}</div>
+              </div>
+              <div style="font-size:21px;font-weight:800;text-align:right;line-height:1.25">
+                <div>E-SKATE {% if s.leaveInMinutes.electric >= 0 %}<span style="font-size:27px;font-weight:900">leave {{ s.leaveInMinutes.electric }}m</span>{% else %}<span style="font-size:27px;font-weight:900;text-decoration:line-through">miss</span>{% endif %}</div>
+                <div>BIKE {% if s.leaveInMinutes.bike >= 0 %}<span style="font-size:27px;font-weight:900">leave {{ s.leaveInMinutes.bike }}m</span>{% else %}<span style="font-size:27px;font-weight:900;text-decoration:line-through">miss</span>{% endif %}</div>
+              </div>
+            </div>
+          {% endif %}
+        {% endfor %}
+        {% if shown == 0 %}
+          <div style="padding:40px 20px;font-size:32px;font-weight:800">No buses soon</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</div>

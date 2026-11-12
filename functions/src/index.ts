@@ -340,18 +340,27 @@ app.get("/events", (req, res) => {
   req.on("close", () => sseClients.delete(res));
 });
 
-// Plain JSON for polling clients (e.g. a LaraPaper/TRMNL recipe). minutesAway is
-// precomputed so a Liquid template doesn't need date maths.
+// Plain JSON for polling clients (e.g. a LaraPaper/TRMNL recipe). minutesAway and
+// leaveInMinutes are precomputed so a Liquid template doesn't need date maths.
 app.get("/api/arrivals", (_req, res) => {
   const nowEpochSeconds = Math.floor(Date.now() / 1000);
   const destinations: Record<string, object[]> = {};
   for (const [name, trips] of Object.entries(lastResult ?? {})) {
     destinations[name] = trips.map((trip) => ({
       ...trip,
-      stops: trip.stops.map((stop) => ({
-        ...stop,
-        minutesAway: Math.round((stop.arrivalEpochSeconds - nowEpochSeconds) / 60),
-      })),
+      stops: trip.stops.map((stop) => {
+        const secondsAway = stop.arrivalEpochSeconds - nowEpochSeconds;
+        const access = stop.comfortableAccessTimeSeconds;
+        return {
+          ...stop,
+          minutesAway: Math.round(secondsAway / 60),
+          // Minutes until you must leave to reach the stop comfortably; negative = too late.
+          leaveInMinutes: {
+            electric: Math.floor((secondsAway - access.electric) / 60),
+            bike: Math.floor((secondsAway - access.bike) / 60),
+          },
+        };
+      }),
     }));
   }
   res.setHeader("Cache-Control", "no-cache");
