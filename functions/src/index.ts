@@ -322,6 +322,7 @@ const gtfs = loadGtfsData();
 const app = express();
 const sseClients = new Set<Response>();
 let lastResult: Record<string, TripEntry[]> | null = null;
+let lastUpdatedAt: string | null = null;
 
 app.use(express.static(path.resolve(__dirname, "../public")));
 
@@ -339,6 +340,28 @@ app.get("/events", (req, res) => {
   req.on("close", () => sseClients.delete(res));
 });
 
+// Plain JSON for polling clients (e.g. a LaraPaper/TRMNL recipe). minutesAway is
+// precomputed so a Liquid template doesn't need date maths.
+app.get("/api/arrivals", (_req, res) => {
+  const nowEpochSeconds = Math.floor(Date.now() / 1000);
+  const destinations: Record<string, object[]> = {};
+  for (const [name, trips] of Object.entries(lastResult ?? {})) {
+    destinations[name] = trips.map((trip) => ({
+      ...trip,
+      stops: trip.stops.map((stop) => ({
+        ...stop,
+        minutesAway: Math.round((stop.arrivalEpochSeconds - nowEpochSeconds) / 60),
+      })),
+    }));
+  }
+  res.setHeader("Cache-Control", "no-cache");
+  res.json({ destinations, nowEpochSeconds, updatedAt: lastUpdatedAt });
+});
+
+app.get("/healthz", (_req, res) => {
+  res.status(lastResult === null ? 503 : 200).json({ ok: lastResult !== null, updatedAt: lastUpdatedAt });
+});
+
 function broadcast(payload: object): void {
   const msg = `data: ${JSON.stringify(payload)}\n\n`;
   for (const client of sseClients) {
@@ -350,6 +373,7 @@ async function pollAndBroadcast(): Promise<void> {
   try {
     const destinations = await buildTransitData(config, stopMap, gtfs);
     lastResult = destinations;
+    lastUpdatedAt = new Date().toISOString();
     broadcast({ destinations, updatedAt: new Date().toISOString() });
     console.log(
       "poll ok:",

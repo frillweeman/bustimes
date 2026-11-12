@@ -1,6 +1,6 @@
 {
 	"tripUpdateUrl": "https://open-data.rtd-denver.com/files/gtfs-rt/rtd/TripUpdate.pb",
-	"pollFrequencySeconds": 30,
+	"pollFrequencySeconds": 60,
 	"stops": [
 		{
 			"stopId": "35483",

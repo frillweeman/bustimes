@@ -16,8 +16,8 @@ COPY functions/src ./src
 RUN npx tsc
 
 # Copy assets needed by the preprocessor
-COPY functions/transit-config.json ./
-COPY functions/google_transit.zip ./
+COPY transit-config.json ./
+COPY google_transit.zip ./
 
 # Run preprocessor → produces gtfs-preprocessed.json
 RUN node lib/preprocess-gtfs.js
@@ -38,7 +38,7 @@ COPY --from=builder /app/lib ./lib
 
 # Runtime assets (no zip in final image)
 COPY --from=builder /app/gtfs-preprocessed.json ./
-COPY functions/transit-config.json ./
+COPY transit-config.json ./
 COPY public ./public
 
 ENV PORT=3000
