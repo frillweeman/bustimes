@@ -30,6 +30,8 @@
   .bb-dot.live { background: #000; }
   .bb-time { margin-left: auto; font-size: 34px; font-weight: 900; white-space: nowrap; }
   .bb-sub { display: flex; align-items: center; justify-content: space-between; margin-top: 3px; height: 26px; }
+  .bb-stops { display: flex; align-items: baseline; gap: 10px; min-width: 0; white-space: nowrap; }
+  .bb-then { font-size: 19px; font-weight: 700; }
   .bb-stop { font-size: 22px; font-weight: 800; line-height: 26px; white-space: nowrap; }
   .bb-none { padding: 56px 28px; font-size: 30px; font-weight: 800; }
   .bb-foot { height: 32px; border-top: 4px solid #000; padding: 0 28px; display: flex; align-items: center; gap: 24px; font-size: 15px; font-weight: 900; letter-spacing: 2px; }
@@ -48,18 +50,19 @@
         <div class="bb-dest">TO {{ name | upcase }}</div>
         {% assign shown = 0 %}
         {% for trip in trips %}
-          {% assign s = trip.stops[0] %}
-          {% if s.minutesAway >= 0 and shown < 5 %}
+          {% assign s = trip.nextStop %}
+          {% assign then = trip.thenStop %}
+          {% if shown < 5 %}
             {% assign shown = shown | plus: 1 %}
             <div class="bb-card">
               <div class="bb-top">
                 <span class="bb-chip">{{ trip.routeId }}</span>
-                <span class="bb-min">{{ s.minutesAway }}</span><span class="bb-unit">min</span>
+                {% if s.minutesAway <= 0 %}<span class="bb-min">NOW</span>{% else %}<span class="bb-min">{{ s.minutesAway }}</span><span class="bb-unit">min</span>{% endif %}
                 <span class="bb-time">{{ s.arrivalTime }}</span>
               </div>
               <div class="bb-sub">
-                <span class="bb-stop">{{ s.nickname }}</span>
-                <span class="bb-state"><span class="bb-dot{% if trip.isRealtime %} live{% endif %}"></span>{% if trip.isRealtime %}LIVE{% else %}SCHED{% endif %}</span>
+                <span class="bb-stops"><span class="bb-stop">{{ s.nickname }}</span>{% if then %}<span class="bb-then">&rsaquo; {{ then.nickname }} {{ then.arrivalTime }}</span>{% endif %}</span>
+                <span class="bb-dot{% if trip.isRealtime %} live{% endif %}"></span>
               </div>
             </div>
           {% endif %}

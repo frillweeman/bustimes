@@ -304,9 +304,13 @@ async function buildTransitData(
       }
     }
 
+    // A trip stays listed until its last configured stop has passed, so a bus that has
+    // left the first stop still shows for the next one. Order by the first stop still ahead.
+    const isAhead = (s: StopArrival) => s.arrivalEpochSeconds > nowEpochSec - 60;
+    const nextArrival = (t: TripEntry) => (t.stops.find(isAhead) ?? t.stops[0]).arrivalEpochSeconds;
     destinationsOutput[dest.name] = Array.from(tripMap.values())
-      .filter((t) => t.stops[0].arrivalEpochSeconds > nowEpochSec - 60)
-      .sort((a, b) => a.stops[0].arrivalEpochSeconds - b.stops[0].arrivalEpochSeconds);
+      .filter((t) => t.stops.some(isAhead))
+      .sort((a, b) => nextArrival(a) - nextArrival(b));
   }
 
   return destinationsOutput;
@@ -333,7 +337,7 @@ app.get("/events", (req, res) => {
   res.flushHeaders();
 
   if (lastResult !== null) {
-    res.write(`data: ${JSON.stringify({ destinations: lastResult, updatedAt: new Date().toISOString() })}\n\n`);
+    res.write(`data: ${JSON.stringify({ destinations: forWebPage(lastResult), updatedAt: new Date().toISOString() })}\n\n`);
   }
 
   sseClients.add(res);
@@ -356,7 +360,7 @@ app.get("/api/arrivals", (_req, res) => {
   const nowEpochSeconds = Math.floor(Date.now() / 1000);
   const destinations: Record<string, object[]> = {};
   for (const [name, trips] of Object.entries(lastResult ?? {})) {
-    destinations[name] = trips.map((trip) => ({
+    const decorated = trips.map((trip) => ({
       ...trip,
       stops: trip.stops.map((stop) => {
         const secondsAway = stop.arrivalEpochSeconds - nowEpochSeconds;
@@ -373,6 +377,14 @@ app.get("/api/arrivals", (_req, res) => {
         };
       }),
     }));
+    // nextStop: first stop that hasn't passed; thenStop: the stop after it (if any).
+    destinations[name] = decorated
+      .map((trip) => {
+        const i = trip.stops.findIndex((stop) => stop.minutesAway >= 0);
+        return i < 0 ? null : { ...trip, nextStop: trip.stops[i], thenStop: trip.stops[i + 1] ?? null };
+      })
+      .filter((trip): trip is NonNullable<typeof trip> => trip !== null)
+      .sort((a, b) => a.nextStop.arrivalEpochSeconds - b.nextStop.arrivalEpochSeconds);
   }
   res.setHeader("Cache-Control", "no-cache");
   res.json({ destinations, nowEpochSeconds, updatedAt: lastUpdatedAt });
@@ -393,6 +405,15 @@ app.get("/healthz", (_req, res) => {
   });
 });
 
+// The web page treats stops[0] as the primary stop, so it only gets trips whose first stop
+// hasn't left yet (the original behaviour). /api/arrivals uses the full list instead.
+function forWebPage(result: Record<string, TripEntry[]>): Record<string, TripEntry[]> {
+  const cutoff = Date.now() / 1000 - 60;
+  return Object.fromEntries(
+    Object.entries(result).map(([name, trips]) => [name, trips.filter((t) => t.stops[0].arrivalEpochSeconds > cutoff)])
+  );
+}
+
 function broadcast(payload: object): void {
   const msg = `data: ${JSON.stringify(payload)}\n\n`;
   for (const client of sseClients) {
@@ -408,7 +429,7 @@ async function pollAndBroadcast(): Promise<void> {
     if (gtfsValidThrough < parseInt(getMtDateInfo(new Date()).dateStr, 10)) {
       console.warn(`static GTFS expired (valid through ${gtfsValidThrough}); run scripts/update_gtfs.py`);
     }
-    broadcast({ destinations, updatedAt: new Date().toISOString() });
+    broadcast({ destinations: forWebPage(destinations), updatedAt: new Date().toISOString() });
     console.log(
       "poll ok:",
       Object.entries(destinations).map(([k, v]) => `${k}: ${v.length}`).join(", "),
