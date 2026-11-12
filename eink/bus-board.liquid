@@ -1,45 +1,81 @@
 {%- comment -%}
   Bus board for a 960x672 1-bit e-paper display (LaraPaper recipe, "full" layout).
-  Polls http://<host>:3000/api/arrivals. Needs the device to use a 960x672
-  Device Model in LaraPaper (otherwise the framework clips the page to 800x480).
-  No framework classes; everything is sized in px. Black and white only:
-  solid fills and heavy weights, no grey.
+  Polls http://<host>:3000/api/arrivals.
+  Pure black and white: solid fills, heavy weights, no grey (grey gets dithered).
+  No framework classes; everything is sized in px on an 8px grid.
 {%- endcomment -%}
 {% assign places = "Boulder,Denver" | split: "," %}
-<div style="position:relative;width:960px;height:672px;overflow:hidden;background:#fff;color:#000;font-family:Inter,Arial,Helvetica,sans-serif;font-weight:700;box-sizing:border-box">
-  <div style="display:flex;justify-content:space-between;align-items:baseline;height:64px;padding:12px 24px 0;border-bottom:6px solid #000;box-sizing:border-box">
-    <span style="font-size:40px;font-weight:900;letter-spacing:1px">BUS BOARD</span>
-    <span style="font-size:30px;font-weight:800">{{ "now" | date: "%-I:%M %p" }}</span>
+{%- comment -%} Devices without a matching Device Model get the framework's 800x480 screen; pin the size. {%- endcomment -%}
+<style>
+  :root { --screen-w: 960px; --screen-h: 672px; }
+  .screen { width: 960px !important; height: 672px !important; max-width: none !important; max-height: none !important; overflow: hidden !important; }
+  .bb { position: relative; width: 960px; height: 672px; overflow: hidden; background: #fff; color: #000; box-sizing: border-box;
+        font-family: Inter, "Helvetica Neue", Arial, sans-serif; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .bb * { box-sizing: border-box; }
+  .bb-head { height: 56px; padding: 0 28px; display: flex; align-items: center; justify-content: space-between; border-bottom: 4px solid #000; }
+  .bb-title { font-size: 26px; font-weight: 900; letter-spacing: 6px; }
+  .bb-clock { font-size: 28px; font-weight: 800; }
+  .bb-body { display: flex; height: 580px; }
+  .bb-col { width: 480px; }
+  .bb-col + .bb-col { border-left: 4px solid #000; width: 480px; }
+  .bb-dest { height: 48px; padding: 0 28px; display: flex; align-items: center; background: #000; color: #fff; font-size: 24px; font-weight: 900; letter-spacing: 5px; }
+  .bb-card { height: 133px; padding: 9px 28px 0; border-bottom: 3px solid #000; }
+  .bb-top { display: flex; align-items: center; gap: 14px; height: 56px; }
+  .bb-chip { background: #000; color: #fff; border-radius: 12px; padding: 0 14px; height: 48px; display: flex; align-items: center; font-size: 34px; font-weight: 900; letter-spacing: 1px; }
+  .bb-min { font-size: 60px; font-weight: 900; line-height: 56px; }
+  .bb-unit { font-size: 24px; font-weight: 800; margin-left: -6px; }
+  .bb-state { margin-left: auto; font-size: 17px; font-weight: 900; letter-spacing: 2px; display: flex; align-items: center; gap: 8px; }
+  .bb-dot { width: 14px; height: 14px; border-radius: 50%; border: 3px solid #000; }
+  .bb-dot.live { background: #000; }
+  .bb-stop { font-size: 21px; font-weight: 800; line-height: 24px; margin-top: 3px; white-space: nowrap; }
+  .bb-go { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
+  .bb-cap { font-size: 15px; font-weight: 900; letter-spacing: 2px; margin-right: 4px; }
+  .bb-pill { border: 3px solid #000; border-radius: 999px; padding: 0 12px; height: 30px; display: flex; align-items: center; font-size: 19px; font-weight: 900; white-space: nowrap; }
+  .bb-pill.miss { border-style: dashed; text-decoration: line-through; }
+  .bb-none { padding: 56px 28px; font-size: 30px; font-weight: 800; }
+  .bb-foot { height: 32px; border-top: 4px solid #000; padding: 0 28px; display: flex; align-items: center; gap: 24px; font-size: 15px; font-weight: 900; letter-spacing: 2px; }
+  .bb-foot .bb-state { margin-left: 0; font-size: 15px; }
+  .bb-dot.small { width: 12px; height: 12px; border-width: 3px; }
+</style>
+<div class="bb">
+  <div class="bb-head">
+    <span class="bb-title">BUS BOARD</span>
+    <span class="bb-clock">{{ "now" | date: "%a %-I:%M %p" }}</span>
   </div>
-  <div style="display:flex;height:608px">
+  <div class="bb-body">
     {% for name in places %}
       {% assign trips = data.destinations[name] %}
-      <div style="flex:1;width:480px;box-sizing:border-box;{% unless forloop.last %}border-right:6px solid #000;{% endunless %}">
-        <div style="background:#000;color:#fff;font-size:30px;font-weight:900;letter-spacing:2px;padding:8px 20px">{{ name | upcase }}</div>
+      <div class="bb-col">
+        <div class="bb-dest">TO {{ name | upcase }}</div>
         {% assign shown = 0 %}
         {% for trip in trips %}
           {% assign s = trip.stops[0] %}
           {% if s.minutesAway >= 0 and shown < 4 %}
             {% assign shown = shown | plus: 1 %}
-            <div style="height:134px;box-sizing:border-box;padding:10px 18px;border-bottom:3px solid #000;overflow:hidden">
-              <div style="display:flex;align-items:baseline;gap:14px;line-height:1">
-                <span style="font-size:44px;font-weight:900">{{ trip.routeId }}</span>
-                <span style="font-size:60px;font-weight:900">{{ s.minutesAway }}</span>
-                <span style="font-size:26px;font-weight:800">min</span>
+            <div class="bb-card">
+              <div class="bb-top">
+                <span class="bb-chip">{{ trip.routeId }}</span>
+                <span class="bb-min">{{ s.minutesAway }}</span><span class="bb-unit">min</span>
+                <span class="bb-state"><span class="bb-dot{% if trip.isRealtime %} live{% endif %}"></span>{% if trip.isRealtime %}LIVE{% else %}SCHED{% endif %}</span>
               </div>
-              <div style="font-size:22px;font-weight:800;line-height:1.2;margin-top:6px;white-space:nowrap">{{ s.nickname }}{% unless trip.isRealtime %} (sched){% endunless %}</div>
-              <div style="font-size:22px;font-weight:800;line-height:1.2;white-space:nowrap">
-                E-SKATE {% if s.leaveInMinutes.electric >= 0 %}leave {{ s.leaveInMinutes.electric }}m{% else %}<span style="text-decoration:line-through">miss</span>{% endif %}
-                &nbsp;&middot;&nbsp;
-                BIKE {% if s.leaveInMinutes.bike >= 0 %}leave {{ s.leaveInMinutes.bike }}m{% else %}<span style="text-decoration:line-through">miss</span>{% endif %}
+              <div class="bb-stop">{{ s.nickname }}</div>
+              <div class="bb-go">
+                <span class="bb-cap">LEAVE IN</span>
+                <span class="bb-pill{% if s.leaveInMinutes.electric < 0 %} miss{% endif %}">E-SKATE {% if s.leaveInMinutes.electric >= 0 %}{{ s.leaveInMinutes.electric }}m{% else %}miss{% endif %}</span>
+                <span class="bb-pill{% if s.leaveInMinutes.bike < 0 %} miss{% endif %}">BIKE {% if s.leaveInMinutes.bike >= 0 %}{{ s.leaveInMinutes.bike }}m{% else %}miss{% endif %}</span>
               </div>
             </div>
           {% endif %}
         {% endfor %}
         {% if shown == 0 %}
-          <div style="padding:40px 20px;font-size:32px;font-weight:800">No buses soon</div>
+          <div class="bb-none">No buses soon</div>
         {% endif %}
       </div>
     {% endfor %}
+  </div>
+  <div class="bb-foot">
+    <span class="bb-state"><span class="bb-dot small live"></span>LIVE</span>
+    <span class="bb-state"><span class="bb-dot small"></span>SCHEDULED</span>
+    <span style="margin-left:auto">RTD DENVER</span>
   </div>
 </div>
