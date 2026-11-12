@@ -146,9 +146,19 @@ def validate(path, config):
     return errors, warnings, notes
 
 
+class _Follow308(urllib.request.HTTPRedirectHandler):
+    """RTD's URL answers 308; urllib only follows it from Python 3.11 on."""
+
+    http_error_308 = urllib.request.HTTPRedirectHandler.http_error_302
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return super().redirect_request(req, fp, 307 if code == 308 else code, msg, headers, newurl)
+
+
 def download(dest):
     req = urllib.request.Request(URL, headers={"User-Agent": "bus-thing/1.0 (personal transit dashboard)"})
-    with urllib.request.urlopen(req, timeout=120) as resp, open(dest, "wb") as out:
+    opener = urllib.request.build_opener(_Follow308)
+    with opener.open(req, timeout=120) as resp, open(dest, "wb") as out:
         shutil.copyfileobj(resp, out)
 
 
