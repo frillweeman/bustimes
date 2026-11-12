@@ -4,14 +4,14 @@
   .view is 800x480, so everything here is sized in px. Black and white only:
   solid fills and heavy weights, no grey.
 {%- endcomment -%}
-{% assign cols = "Boulder,Denver" | split: "," %}
+{% assign places = "Boulder,Denver" | split: "," %}
 <div style="position:relative;width:960px;height:672px;overflow:hidden;background:#fff;color:#000;font-family:Inter,Arial,Helvetica,sans-serif;font-weight:700;box-sizing:border-box">
   <div style="display:flex;justify-content:space-between;align-items:baseline;height:64px;padding:12px 24px 0;border-bottom:6px solid #000;box-sizing:border-box">
     <span style="font-size:40px;font-weight:900;letter-spacing:1px">BUS BOARD</span>
     <span style="font-size:30px;font-weight:800">{{ "now" | date: "%-I:%M %p" }}</span>
   </div>
   <div style="display:flex;height:608px">
-    {% for name in cols %}
+    {% for name in places %}
       {% assign trips = data.destinations[name] %}
       <div style="flex:1;width:480px;box-sizing:border-box;{% unless forloop.last %}border-right:6px solid #000;{% endunless %}">
         <div style="background:#000;color:#fff;font-size:30px;font-weight:900;letter-spacing:2px;padding:8px 20px">{{ name | upcase }}</div>
