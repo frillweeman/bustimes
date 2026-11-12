@@ -19,7 +19,8 @@
   .bb-col { width: 480px; }
   .bb-col + .bb-col { border-left: 4px solid #000; width: 480px; }
   .bb-dest { height: 48px; padding: 0 28px; display: flex; align-items: center; background: #000; color: #fff; font-size: 24px; font-weight: 900; letter-spacing: 5px; }
-  .bb-card { height: 133px; padding: 9px 28px 0; border-bottom: 3px solid #000; }
+  .bb-card { height: 106px; padding: 11px 28px 0; border-bottom: 3px solid #000; }
+  .bb-col .bb-card:nth-child(6) { border-bottom: 0; }
   .bb-top { display: flex; align-items: center; gap: 14px; height: 56px; }
   .bb-chip { background: #000; color: #fff; border-radius: 12px; padding: 0 14px; height: 48px; display: flex; align-items: center; font-size: 34px; font-weight: 900; letter-spacing: 1px; }
   .bb-min { font-size: 60px; font-weight: 900; line-height: 56px; }
@@ -27,12 +28,7 @@
   .bb-state { margin-left: auto; font-size: 17px; font-weight: 900; letter-spacing: 2px; display: flex; align-items: center; gap: 8px; }
   .bb-dot { width: 14px; height: 14px; border-radius: 50%; border: 3px solid #000; }
   .bb-dot.live { background: #000; }
-  .bb-stop { font-size: 21px; font-weight: 800; line-height: 24px; margin-top: 3px; white-space: nowrap; }
-  .bb-go { display: flex; align-items: center; gap: 8px; margin-top: 5px; }
-  .bb-cap { font-size: 15px; font-weight: 900; letter-spacing: 2px; margin-right: 4px; }
-  .bb-pill { border: 3px solid #000; border-radius: 999px; padding: 0 12px; height: 30px; display: flex; align-items: center; font-size: 19px; font-weight: 900; white-space: nowrap; }
-  .bb-ico { width: 26px; height: 26px; margin-right: 6px; flex: none; fill: #000; }
-  .bb-pill.miss { border-style: dashed; text-decoration: line-through; }
+  .bb-stop { font-size: 22px; font-weight: 800; line-height: 26px; margin-top: 3px; white-space: nowrap; }
   .bb-none { padding: 56px 28px; font-size: 30px; font-weight: 800; }
   .bb-foot { height: 32px; border-top: 4px solid #000; padding: 0 28px; display: flex; align-items: center; gap: 24px; font-size: 15px; font-weight: 900; letter-spacing: 2px; }
   .bb-foot .bb-state { margin-left: 0; font-size: 15px; }
@@ -51,7 +47,7 @@
         {% assign shown = 0 %}
         {% for trip in trips %}
           {% assign s = trip.stops[0] %}
-          {% if s.minutesAway >= 0 and shown < 4 %}
+          {% if s.minutesAway >= 0 and shown < 5 %}
             {% assign shown = shown | plus: 1 %}
             <div class="bb-card">
               <div class="bb-top">
@@ -60,11 +56,6 @@
                 <span class="bb-state"><span class="bb-dot{% if trip.isRealtime %} live{% endif %}"></span>{% if trip.isRealtime %}LIVE{% else %}SCHED{% endif %}</span>
               </div>
               <div class="bb-stop">{{ s.nickname }}</div>
-              <div class="bb-go">
-                <span class="bb-cap">LEAVE IN</span>
-                <span class="bb-pill{% if s.leaveInMinutes.electric < 0 %} miss{% endif %}"><svg class="bb-ico" viewBox="0 -960 960 960" aria-hidden="true"><path d="M269-9q-9-9-9-21t9-21q9-9 21-9t21 9q9 9 9 21t-9 21q-9 9-21 9t-21-9Zm340 0q-9-9-9-21t9-21q9-9 21-9t21 9q9 9 9 21t-9 21q-9 9-21 9t-21-9ZM270-80q-45 0-83-19.5T124-152q-3-5-4.5-9t-1.5-9q0-12 8-21t22-9q8 0 13.5 3t10.5 9q12 17 30.5 28.5T242-143l125-151-53-166q-5-17-3-34t11-32l96-154h-94l-76 122-68-42 100-160h228q27 0 43.5 15t22.5 28l21 48q20 48 64.5 78.5T760-560v80q-70 0-128-33.5T539-602l-72 115 173 107v240h12q29 0 54-13t42-35q5-6 10.5-9t13.5-3q13 0 21.5 9t8.5 21q0 5-1.5 9t-4.5 9q-25 33-62 52.5T652-80H270Zm74-60h216v-184l-140-88 40 132-116 140Zm256-620q-33 0-56.5-23.5T520-840q0-33 23.5-56.5T600-920q33 0 56.5 23.5T680-840q0 33-23.5 56.5T600-760Z"/></svg>{% if s.leaveInMinutes.electric >= 0 %}{{ s.leaveInMinutes.electric }}m{% else %}miss{% endif %}</span>
-                <span class="bb-pill{% if s.leaveInMinutes.bike < 0 %} miss{% endif %}"><svg class="bb-ico" viewBox="0 -960 960 960" aria-hidden="true"><path d="M200-80q-83 0-141.5-58.5T0-280q0-83 58.5-141.5T200-480q83 0 141.5 58.5T400-280q0 83-58.5 141.5T200-80Zm85-115q35-35 35-85t-35-85q-35-35-85-35t-85 35q-35 35-35 85t35 85q35 35 85 35t85-35Zm155-5v-200L312-512q-12-11-18-25.5t-6-30.5q0-16 6.5-30.5T312-624l112-112q12-12 27.5-18t32.5-6q17 0 32.5 6t27.5 18l76 76q28 28 64 44t76 16v80q-57 0-108.5-22T560-604l-32-32-96 96 88 92v248h-80Zm123.5-563.5Q540-787 540-820t23.5-56.5Q587-900 620-900t56.5 23.5Q700-853 700-820t-23.5 56.5Q653-740 620-740t-56.5-23.5ZM760-80q-83 0-141.5-58.5T560-280q0-83 58.5-141.5T760-480q83 0 141.5 58.5T960-280q0 83-58.5 141.5T760-80Zm85-115q35-35 35-85t-35-85q-35-35-85-35t-85 35q-35 35-35 85t35 85q35 35 85 35t85-35Z"/></svg>{% if s.leaveInMinutes.bike >= 0 %}{{ s.leaveInMinutes.bike }}m{% else %}miss{% endif %}</span>
-              </div>
             </div>
           {% endif %}
         {% endfor %}
