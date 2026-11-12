@@ -5,6 +5,11 @@
   solid fills and heavy weights, no grey.
 {%- endcomment -%}
 {% assign places = "Boulder,Denver" | split: "," %}
+{%- comment -%} A device without a Device Model gets the framework's 800x480 screen size; override it. {%- endcomment -%}
+<style>
+  :root { --screen-w: 960px; --screen-h: 672px; }
+  .screen { width: 960px !important; height: 672px !important; max-width: none !important; max-height: none !important; overflow: hidden !important; }
+</style>
 <div style="position:relative;width:960px;height:672px;overflow:hidden;background:#fff;color:#000;font-family:Inter,Arial,Helvetica,sans-serif;font-weight:700;box-sizing:border-box">
   <div style="display:flex;justify-content:space-between;align-items:baseline;height:64px;padding:12px 24px 0;border-bottom:6px solid #000;box-sizing:border-box">
     <span style="font-size:40px;font-weight:900;letter-spacing:1px">BUS BOARD</span>
