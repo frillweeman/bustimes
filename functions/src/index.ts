@@ -342,6 +342,16 @@ app.get("/events", (req, res) => {
 
 // Plain JSON for polling clients (e.g. a LaraPaper/TRMNL recipe). minutesAway and
 // leaveInMinutes are precomputed so a Liquid template doesn't need date maths.
+const clockFormat = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/Denver",
+  hour: "numeric",
+  minute: "2-digit",
+});
+function clockTime(epochSeconds: number): string {
+  // newer ICU puts a narrow no-break space before AM/PM
+  return clockFormat.format(new Date(epochSeconds * 1000)).replace(/\u202f/g, " ");
+}
+
 app.get("/api/arrivals", (_req, res) => {
   const nowEpochSeconds = Math.floor(Date.now() / 1000);
   const destinations: Record<string, object[]> = {};
@@ -354,6 +364,7 @@ app.get("/api/arrivals", (_req, res) => {
         return {
           ...stop,
           minutesAway: Math.round(secondsAway / 60),
+          arrivalTime: clockTime(stop.arrivalEpochSeconds),
           // Minutes until you must leave to reach the stop comfortably; negative = too late.
           leaveInMinutes: {
             electric: Math.floor((secondsAway - access.electric) / 60),
@@ -367,8 +378,19 @@ app.get("/api/arrivals", (_req, res) => {
   res.json({ destinations, nowEpochSeconds, updatedAt: lastUpdatedAt });
 });
 
+// Last day the loaded static GTFS has service. Realtime trips are matched to it by trip_id,
+// so once it expires (or RTD publishes a new feed) trips silently go missing.
+const gtfsValidThrough = Math.max(0, ...Array.from(gtfs.calendar.values(), (c) => c.endDate));
+
 app.get("/healthz", (_req, res) => {
-  res.status(lastResult === null ? 503 : 200).json({ ok: lastResult !== null, updatedAt: lastUpdatedAt });
+  const today = parseInt(getMtDateInfo(new Date()).dateStr, 10);
+  const scheduleExpired = gtfsValidThrough < today;
+  res.status(lastResult === null ? 503 : 200).json({
+    ok: lastResult !== null && !scheduleExpired,
+    updatedAt: lastUpdatedAt,
+    gtfsValidThrough: String(gtfsValidThrough),
+    scheduleExpired,
+  });
 });
 
 function broadcast(payload: object): void {
@@ -383,6 +405,9 @@ async function pollAndBroadcast(): Promise<void> {
     const destinations = await buildTransitData(config, stopMap, gtfs);
     lastResult = destinations;
     lastUpdatedAt = new Date().toISOString();
+    if (gtfsValidThrough < parseInt(getMtDateInfo(new Date()).dateStr, 10)) {
+      console.warn(`static GTFS expired (valid through ${gtfsValidThrough}); run scripts/update_gtfs.py`);
+    }
     broadcast({ destinations, updatedAt: new Date().toISOString() });
     console.log(
       "poll ok:",

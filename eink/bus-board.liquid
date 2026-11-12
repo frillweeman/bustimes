@@ -25,10 +25,12 @@
   .bb-chip { background: #000; color: #fff; border-radius: 12px; padding: 0 14px; height: 48px; display: flex; align-items: center; font-size: 34px; font-weight: 900; letter-spacing: 1px; }
   .bb-min { font-size: 60px; font-weight: 900; line-height: 56px; }
   .bb-unit { font-size: 24px; font-weight: 800; margin-left: -6px; }
-  .bb-state { margin-left: auto; font-size: 17px; font-weight: 900; letter-spacing: 2px; display: flex; align-items: center; gap: 8px; }
+  .bb-state { margin-left: auto; font-size: 16px; font-weight: 900; letter-spacing: 2px; display: flex; align-items: center; gap: 8px; }
   .bb-dot { width: 14px; height: 14px; border-radius: 50%; border: 3px solid #000; }
   .bb-dot.live { background: #000; }
-  .bb-stop { font-size: 22px; font-weight: 800; line-height: 26px; margin-top: 3px; white-space: nowrap; }
+  .bb-time { margin-left: auto; font-size: 34px; font-weight: 900; white-space: nowrap; }
+  .bb-sub { display: flex; align-items: center; justify-content: space-between; margin-top: 3px; height: 26px; }
+  .bb-stop { font-size: 22px; font-weight: 800; line-height: 26px; white-space: nowrap; }
   .bb-none { padding: 56px 28px; font-size: 30px; font-weight: 800; }
   .bb-foot { height: 32px; border-top: 4px solid #000; padding: 0 28px; display: flex; align-items: center; gap: 24px; font-size: 15px; font-weight: 900; letter-spacing: 2px; }
   .bb-foot .bb-state { margin-left: 0; font-size: 15px; }
@@ -53,9 +55,12 @@
               <div class="bb-top">
                 <span class="bb-chip">{{ trip.routeId }}</span>
                 <span class="bb-min">{{ s.minutesAway }}</span><span class="bb-unit">min</span>
+                <span class="bb-time">{{ s.arrivalTime }}</span>
+              </div>
+              <div class="bb-sub">
+                <span class="bb-stop">{{ s.nickname }}</span>
                 <span class="bb-state"><span class="bb-dot{% if trip.isRealtime %} live{% endif %}"></span>{% if trip.isRealtime %}LIVE{% else %}SCHED{% endif %}</span>
               </div>
-              <div class="bb-stop">{{ s.nickname }}</div>
             </div>
           {% endif %}
         {% endfor %}

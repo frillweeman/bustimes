@@ -67,3 +67,7 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# RTD static GTFS: refreshed by scripts/update_gtfs.py (cron), not versioned
+/google_transit.zip
+/google_transit.zip.prev

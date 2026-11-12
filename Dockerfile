@@ -15,7 +15,8 @@ COPY functions/tsconfig.json ./
 COPY functions/src ./src
 RUN npx tsc
 
-# Copy assets needed by the preprocessor
+# Copy assets needed by the preprocessor. google_transit.zip is not in git:
+# run scripts/update_gtfs.py first (it downloads RTD's current feed).
 COPY transit-config.json ./
 COPY google_transit.zip ./
 
